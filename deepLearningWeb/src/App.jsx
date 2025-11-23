@@ -95,18 +95,24 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen bg-[#1e1e1e] text-gray-300 font-sans overflow-hidden">
+    // Update Layout: flex-col (Mobile: Atas-Bawah) -> md:flex-row (Desktop: Kiri-Kanan)
+    <div className="flex flex-col md:flex-row h-screen w-screen bg-[#1e1e1e] text-gray-300 font-sans overflow-hidden">
       
-      {/* sidebar absolute */}
-      <aside className="w-72 bg-[#1e1e1e] border-r border-[#333] flex flex-col flex-shrink-0 z-20">
+      {/* Sidebar: 
+          - Order 2 (Mobile: Di Bawah) -> md:Order 1 (Desktop: Di Kiri)
+          - Width Full (Mobile) -> md:w-72 (Desktop)
+          - Height 45% (Mobile) -> md:h-full (Desktop)
+          - Border Top (Mobile) -> Border Right (Desktop)
+      */}
+      <aside className="order-2 md:order-1 w-full md:w-72 h-[45%] md:h-full bg-[#1e1e1e] border-t md:border-t-0 md:border-r border-[#333] flex flex-col flex-shrink-0 z-20">
         
         {/* Header */}
-        <div className="h-16 flex items-center justify-center border-b border-[#333]">
+        <div className="h-12 md:h-16 flex items-center justify-center border-b border-[#333] flex-shrink-0">
           <h1 className="font-bold text-white tracking-widest text-sm">VEHICLE DETECTION</h1>
         </div>
 
         {/* Konten Sidebar */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-6 md:space-y-8 custom-scrollbar">
           
           {/* Source Controls */}
           <div>
@@ -168,7 +174,7 @@ export default function App() {
         </div>
 
         {/* Stats Table */}
-        <div className="p-5 bg-[#1a1a1a] border-t border-[#333]">
+        <div className="p-4 md:p-5 bg-[#1a1a1a] border-t border-[#333] flex-shrink-0">
            <div className="space-y-2">
              {[
                { l: 'Car', v: stats.car },
@@ -189,9 +195,8 @@ export default function App() {
           </div>
         </div>
       </aside>
-
-      {/* main view */}
-      <main className="flex-1 flex flex-col bg-black relative overflow-hidden">
+      
+      <main className="order-1 md:order-2 flex-1 flex flex-col bg-black relative overflow-hidden">
         
         {/* Status Overlay */}
         <div className="absolute top-4 left-4 z-10 flex items-center gap-2 px-3 py-1 rounded bg-black/50 backdrop-blur border border-white/10">
@@ -201,7 +206,7 @@ export default function App() {
            </span>
         </div>
 
-        {/* video container */}
+        {/* Video Container */}
         <div className="w-full h-full flex items-center justify-center">
             {inputType === 'none' ? (
               <div className="text-center opacity-40">
@@ -222,7 +227,7 @@ export default function App() {
                     />
                  )}
                  
-                 {/* count overlay*/}
+                 {/* Count Overlay */}
                  {isImageMode && (
                    <div className="absolute bottom-6 left-6 z-10 bg-black/70 backdrop-blur px-4 py-2 rounded border-l-4 border-green-500">
                       <p className="text-[10px] text-gray-400 uppercase tracking-wider">Detected</p>
