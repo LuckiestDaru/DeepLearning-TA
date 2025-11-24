@@ -1,0 +1,15 @@
+# Menginstall paket sistem operasi Linux yang dibutuhkan
+[packages]
+python311 = "3.11"
+ffmpeg = "latest"
+libgl1 = "latest"      # <-- INI OBATNYA (Driver Grafis)
+glib = "latest"        # <-- Ini teman obatnya
+
+# Perintah Install Python Library
+[phases.install]
+cmds = ["python -m venv --copies /opt/venv && . /opt/venv/bin/activate && pip install -r requirements.txt"]
+
+# Perintah Menjalankan Aplikasi (Start Command)
+# Kita kunci di sini supaya tidak perlu setting manual di dashboard lagi
+[start]
+cmd = "/opt/venv/bin/python app.py"
