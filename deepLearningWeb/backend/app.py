@@ -1,4 +1,5 @@
 import os
+import time # TAMBAHAN BARU: Untuk mengatur kecepatan video
 print("🚀 MEMULAI APLIKASI FLASK (OPTIMIZED MODE)...", flush=True)
 
 import cv2
@@ -18,14 +19,14 @@ UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER): os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-model = YOLO("yolo11n.pt") 
+model = YOLO("models/yolo11n.pt") 
 
 CLASS_ID_TO_NAME = { 2: "car", 3: "motorbike", 5: "bus", 7: "truck" }
 VALID_CLASSES = [2, 3, 5, 7]
 
 # Tools
 tracker = sv.ByteTrack()
-box_annotator = sv.BoxAnnotator(thickness=2) # Tipiskan garis biar ringan render
+box_annotator = sv.BoxAnnotator(thickness=2) 
 label_annotator = sv.LabelAnnotator(text_scale=0.5)
 trace_annotator = sv.TraceAnnotator()
 line_zone_annotator = sv.LineZoneAnnotator(thickness=2, text_thickness=0, text_scale=0, color=sv.Color.GREEN)
@@ -56,7 +57,7 @@ def process_frame_optimized(frame, run_ai=True):
     """
     global line_zone, stats, last_detections
     
-   #resize frame if too large
+    #resize frame if too large
     height, width = frame.shape[:2]
     target_width = 640
     if width > target_width:
@@ -130,11 +131,19 @@ def get_video_frames():
     if not current_config['active'] or current_config['source'] is None: return 
     cap = cv2.VideoCapture(current_config['source'])
     
+    # FPS SYNC SETUP
+    video_fps = cap.get(cv2.CAP_PROP_FPS)
+    if video_fps == 0: video_fps = 30 # Fallback jika FPS gagal dibaca
+    frame_duration = 1.0 / video_fps 
+
     #skip frame variables
     frame_counter = 0
-    SKIP_FRAMES = 2 
+    SKIP_FRAMES = 1
     
     while current_config['active']:
+        #timer untuk sinkronisasi
+        start_time = time.time()
+
         success, frame = cap.read()
         if not success:
             if isinstance(current_config['source'], str): 
@@ -151,6 +160,13 @@ def get_video_frames():
         
         ret, buffer = cv2.imencode('.jpg', processed_frame)
         yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+        
+        #security time for duration
+        elapsed_time = time.time() - start_time
+        # jeda bila frame diproses lebih cepat dari waktu video asli
+        if elapsed_time < frame_duration:
+            time.sleep(frame_duration - elapsed_time)
+
     cap.release()
 
 #routes

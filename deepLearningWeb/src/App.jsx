@@ -126,7 +126,7 @@ export default function App() {
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={handleSetWebcam} 
                   className={`px-3 py-3 rounded text-xs font-bold transition-all border ${inputType === 'webcam' ? 'bg-green-900/20 border-green-800 text-green-400' : 'bg-[#252525] border-transparent text-gray-400 hover:bg-[#303030]'}`}>
-                  WEBCAM
+                  WEBCAM<br/>(local only)
                 </button>
                 <button onClick={() => document.getElementById('fileInput').click()} 
                   className={`px-3 py-3 rounded text-xs font-bold transition-all border ${inputType === 'upload' ? 'bg-green-900/20 border-green-800 text-green-400' : 'bg-[#252525] border-transparent text-gray-400 hover:bg-[#303030]'}`}>
@@ -195,7 +195,7 @@ export default function App() {
           </div>
         </div>
       </aside>
-      
+
       <main className="order-1 md:order-2 flex-1 flex flex-col bg-black relative overflow-hidden">
         
         {/* Status Overlay */}
