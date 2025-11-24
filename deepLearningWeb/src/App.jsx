@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 
-//ambil dari .env atau default ke localhost
+// Ambil URL dari .env atau default ke localhost
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export default function App() {
-  //states
+  // --- STATE MANAGEMENT ---
   const [inputType, setInputType] = useState('none'); 
   const [imageResult, setImageResult] = useState(null); 
   const [stats, setStats] = useState({ total: 0, car: 0, motorbike: 0, bus: 0, truck: 0 });
   const [streamTrigger, setStreamTrigger] = useState(0); 
   const [isImageMode, setIsImageMode] = useState(false); 
+  
+  // State untuk loading spinner saat upload
+  const [isLoading, setIsLoading] = useState(false);
 
   const [config, setConfig] = useState({
     mode: 'detect',
@@ -17,10 +20,11 @@ export default function App() {
     direction: 'top-down'
   });
 
-  // efekt untuk polling stats setiap detik saat input aktif
+  // --- EFFECT: POLLING STATS ---
   useEffect(() => {
     const interval = setInterval(() => {
-      if (inputType !== 'none') {
+      // Jangan fetch stats jika sedang 'none' atau sedang loading upload
+      if (inputType !== 'none' && !isLoading) {
         fetch(`${API_BASE}/stats`)
           .then(res => res.json())
           .then(data => setStats(data))
@@ -28,9 +32,10 @@ export default function App() {
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [inputType]);
+  }, [inputType, isLoading]);
 
-  //handlers
+  // --- HANDLERS ---
+
   const updateConfig = async (newConfig) => {
     const updated = { ...config, ...newConfig };
     setConfig(updated);
@@ -39,6 +44,7 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updated)
     });
+    // Refresh gambar statis jika user ganti filter saat mode upload gambar
     if (inputType === 'upload' && imageResult) fetchImageResult();
   };
 
@@ -60,23 +66,31 @@ export default function App() {
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    
     const formData = new FormData();
     formData.append('file', file);
 
+    // Aktifkan Loading State
+    setIsLoading(true);
+    setInputType('upload'); 
+
     try {
-      setInputType('upload');
       const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
       const data = await res.json();
+      
       if (data.type === 'image') {
         setIsImageMode(true);
-        fetchImageResult();
+        await fetchImageResult(); // Tunggu gambar selesai diproses
       } else {
         setIsImageMode(false);
         setImageResult(null);
-        setStreamTrigger(prev => prev + 1);
+        setStreamTrigger(prev => prev + 1); // Refresh video player
       }
     } catch (error) {
-      alert("Gagal upload file.");
+      alert("Gagal upload file. Pastikan backend menyala.");
+    } finally {
+      // Matikan Loading (baik sukses maupun gagal)
+      setIsLoading(false);
     }
   };
 
@@ -86,7 +100,7 @@ export default function App() {
       const data = await res.json();
       if (data.image) {
         setImageResult(data.image);
-        // refresh stats
+        // Ambil stats terbaru setelah gambar diproses
         fetch(`${API_BASE}/stats`)
           .then(res => res.json())
           .then(data => setStats(data));
@@ -94,24 +108,22 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
+  // --- RENDER UI ---
+
   return (
-    // Update Layout: flex-col (Mobile: Atas-Bawah) -> md:flex-row (Desktop: Kiri-Kanan)
+    // Layout Responsif: Mobile (flex-col) vs Desktop (md:flex-row)
     <div className="flex flex-col md:flex-row h-screen w-screen bg-[#1e1e1e] text-gray-300 font-sans overflow-hidden">
       
-      {/* Sidebar: 
-          - Order 2 (Mobile: Di Bawah) -> md:Order 1 (Desktop: Di Kiri)
-          - Width Full (Mobile) -> md:w-72 (Desktop)
-          - Height 45% (Mobile) -> md:h-full (Desktop)
-          - Border Top (Mobile) -> Border Right (Desktop)
-      */}
+      {/* SIDEBAR KONTROL */}
+      {/* Order: Di Mobile ditaruh bawah (order-2), di Desktop di kiri (order-1) */}
       <aside className="order-2 md:order-1 w-full md:w-72 h-[45%] md:h-full bg-[#1e1e1e] border-t md:border-t-0 md:border-r border-[#333] flex flex-col flex-shrink-0 z-20">
         
-        {/* Header */}
+        {/* Header Sidebar */}
         <div className="h-12 md:h-16 flex items-center justify-center border-b border-[#333] flex-shrink-0">
           <h1 className="font-bold text-white tracking-widest text-sm">VEHICLE DETECTION</h1>
         </div>
 
-        {/* Konten Sidebar */}
+        {/* Konten Scrollable */}
         <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-6 md:space-y-8 custom-scrollbar">
           
           {/* Source Controls */}
@@ -126,28 +138,30 @@ export default function App() {
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={handleSetWebcam} 
                   className={`px-3 py-3 rounded text-xs font-bold transition-all border ${inputType === 'webcam' ? 'bg-green-900/20 border-green-800 text-green-400' : 'bg-[#252525] border-transparent text-gray-400 hover:bg-[#303030]'}`}>
-                  WEBCAM<br/>(local only)
+                  WEBCAM<br/>(Local)
                 </button>
                 <button onClick={() => document.getElementById('fileInput').click()} 
                   className={`px-3 py-3 rounded text-xs font-bold transition-all border ${inputType === 'upload' ? 'bg-green-900/20 border-green-800 text-green-400' : 'bg-[#252525] border-transparent text-gray-400 hover:bg-[#303030]'}`}>
                   UPLOAD
                 </button>
               </div>
+              {/* Input File Tersembunyi */}
               <input id="fileInput" type="file" onChange={handleFileUpload} className="hidden" />
             </div>
           </div>
 
-          {/* Settings */}
+          {/* Settings Controls */}
           <div className="space-y-6">
             <div>
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Detection Mode</label>
               <select value={config.mode} onChange={(e) => updateConfig({ mode: e.target.value })} 
                 className="w-full bg-[#252525] border border-[#333] text-gray-200 text-xs rounded p-2.5 outline-none focus:border-gray-500">
                 <option value="detect">Standard Detection</option>
-                <option value="count-video">Counting & Tracking (video)</option>
+                <option value="count-video">Counting & Tracking</option>
               </select>
             </div>
 
+            {/* Dropdown Direction hanya muncul saat mode Video Counting */}
             {config.mode === 'count-video' && !isImageMode && (
               <div>
                 <label className="text-[10px] font-bold text-yellow-600 uppercase tracking-widest mb-2 block">Direction</label>
@@ -173,7 +187,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Stats Table */}
+        {/* Statistics Panel */}
         <div className="p-4 md:p-5 bg-[#1a1a1a] border-t border-[#333] flex-shrink-0">
            <div className="space-y-2">
              {[
@@ -196,9 +210,11 @@ export default function App() {
         </div>
       </aside>
 
+      {/* MAIN VIEW AREA */}
+      {/* Order: Di Mobile ditaruh atas (order-1), di Desktop di kanan (order-2) */}
       <main className="order-1 md:order-2 flex-1 flex flex-col bg-black relative overflow-hidden">
         
-        {/* Status Overlay */}
+        {/* Status Overlay (Top Left) */}
         <div className="absolute top-4 left-4 z-10 flex items-center gap-2 px-3 py-1 rounded bg-black/50 backdrop-blur border border-white/10">
            <div className={`w-2 h-2 rounded-full ${inputType === 'none' ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`}></div>
            <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">
@@ -206,35 +222,47 @@ export default function App() {
            </span>
         </div>
 
-        {/* Video Container */}
         <div className="w-full h-full flex items-center justify-center">
-            {inputType === 'none' ? (
-              <div className="text-center opacity-40">
-                <div className="w-16 h-16 border-2 border-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                   <div className="w-2 h-2 bg-gray-600 rounded-full animate-ping"></div>
+            
+            {isLoading ? (
+                // Tampilan Loading
+                <div className="text-center p-6">
+                    <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-green-400 font-bold animate-pulse tracking-widest text-sm">PROCESSING MEDIA...</p>
+                    <p className="text-gray-600 text-xs mt-2 tracking-wide">If it doesn't work, please restart website</p>
                 </div>
-                <p className="text-gray-500 text-xs tracking-[0.2em] uppercase">Ready for Input Detecting</p>
-              </div>
             ) : (
-              <>
-                 {imageResult ? (
-                    <img src={imageResult} alt="Result" className="w-full h-full object-contain" />
-                 ) : (
-                    <img 
-                      src={`${API_BASE}/video_feed?t=${streamTrigger}`} 
-                      alt="Stream" 
-                      className="w-full h-full object-contain" 
-                    />
-                 )}
-                 
-                 {/* Count Overlay */}
-                 {isImageMode && (
-                   <div className="absolute bottom-6 left-6 z-10 bg-black/70 backdrop-blur px-4 py-2 rounded border-l-4 border-green-500">
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wider">Detected</p>
-                      <p className="text-2xl font-mono text-white">{stats.total}</p>
-                   </div>
-                 )}
-              </>
+                // if not loading~
+                inputType === 'none' ? (
+                    // Mode Idle / Standby
+                    <div className="text-center opacity-40">
+                        <div className="w-16 h-16 border-2 border-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                           <div className="w-2 h-2 bg-gray-600 rounded-full animate-ping"></div>
+                        </div>
+                        <p className="text-gray-500 text-xs tracking-[0.2em] uppercase">Ready for Input Detecting</p>
+                    </div>
+                ) : (
+                    // Mode Video Stream atau Gambar
+                    <>
+                        {imageResult ? (
+                            <img src={imageResult} alt="Result" className="w-full h-full object-contain" />
+                        ) : (
+                            <img 
+                              src={`${API_BASE}/video_feed?t=${streamTrigger}`} 
+                              alt="Stream" 
+                              className="w-full h-full object-contain" 
+                            />
+                        )}
+                        
+                        {/* Total Count Overlay (GAMBAR ONLYY) */}
+                        {isImageMode && (
+                          <div className="absolute bottom-6 left-6 z-10 bg-black/70 backdrop-blur px-4 py-2 rounded border-l-4 border-green-500">
+                              <p className="text-[10px] text-gray-400 uppercase tracking-wider">Detected</p>
+                              <p className="text-2xl font-mono text-white">{stats.total}</p>
+                          </div>
+                        )}
+                    </>
+                )
             )}
         </div>
       </main>
