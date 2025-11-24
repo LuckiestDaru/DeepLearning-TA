@@ -1,4 +1,7 @@
 import os
+#dbug
+print("🚀 MEMULAI APLIKASI FLASK...", flush=True)
+
 import cv2
 import numpy as np
 import base64
@@ -17,7 +20,7 @@ if not os.path.exists(UPLOAD_FOLDER): os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 #load model trained
-model = YOLO("models/yolo11m.pt") 
+model = YOLO("models/yolo11s.pt") 
 
 #class mapping
 CLASS_ID_TO_NAME = {
