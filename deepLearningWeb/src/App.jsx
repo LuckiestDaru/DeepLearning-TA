@@ -138,7 +138,7 @@ export default function App() {
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={handleSetWebcam} 
                   className={`px-3 py-3 rounded text-xs font-bold transition-all border ${inputType === 'webcam' ? 'bg-green-900/20 border-green-800 text-green-400' : 'bg-[#252525] border-transparent text-gray-400 hover:bg-[#303030]'}`}>
-                  WEBCAM<br/>(Local)
+                  WEBCAM<br/>(Local Only)
                 </button>
                 <button onClick={() => document.getElementById('fileInput').click()} 
                   className={`px-3 py-3 rounded text-xs font-bold transition-all border ${inputType === 'upload' ? 'bg-green-900/20 border-green-800 text-green-400' : 'bg-[#252525] border-transparent text-gray-400 hover:bg-[#303030]'}`}>
