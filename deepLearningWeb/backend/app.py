@@ -20,7 +20,7 @@ if not os.path.exists(UPLOAD_FOLDER): os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Gunakan Nano agar ringan
-model = YOLO("yolo11n.pt") 
+model = YOLO("yolo11m.pt") 
 
 CLASS_ID_TO_NAME = { 2: "car", 3: "motorbike", 5: "bus", 7: "truck" }
 VALID_CLASSES = [2, 3, 5, 7]
