@@ -1,6 +1,6 @@
 import os
 import time 
-print("MEMULAI FLASK.....!!", flush=True)
+print("🚀 MEMULAI APLIKASI FLASK (OPTIMIZED MODE)...", flush=True)
 
 import cv2
 import numpy as np
@@ -19,7 +19,6 @@ UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER): os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Gunakan Nano agar ringan
 model = YOLO("yolo11n.pt") 
 
 CLASS_ID_TO_NAME = { 2: "car", 3: "motorbike", 5: "bus", 7: "truck" }
@@ -38,6 +37,8 @@ current_config = {
 }
 stats = { "car": 0, "motorbike": 0, "bus": 0, "truck": 0, "total": 0 }
 line_zone = None
+
+# Variabel Global untuk menyimpan deteksi terakhir (Frame Skipping)
 last_detections = None
 
 def setup_line_zone(frame_shape):
@@ -52,6 +53,7 @@ def setup_line_zone(frame_shape):
 def process_frame_optimized(frame, run_ai=True):
     global line_zone, stats, last_detections
     
+    #resize frame if too large
     height, width = frame.shape[:2]
     target_width = 640
     if width > target_width:
@@ -59,6 +61,10 @@ def process_frame_optimized(frame, run_ai=True):
         new_height = int(height * scale)
         frame = cv2.resize(frame, (target_width, new_height))
 
+    if current_config['mode'] == 'count-video' and line_zone is None:
+        setup_line_zone(frame.shape)
+
+    # Enhancement
     if current_config['enhancement'] != 'none':
         frame = apply_enhancement(frame, current_config['enhancement'])
 
@@ -74,11 +80,11 @@ def process_frame_optimized(frame, run_ai=True):
         stats = temp_stats
         
         frame = box_annotator.annotate(scene=frame, detections=detections)
-        # Label hanya nama kelas (tanpa angka ID)
         labels = [f"{CLASS_ID_TO_NAME[c]}" for c in detections.class_id]
         frame = label_annotator.annotate(scene=frame, detections=detections, labels=labels)
         return frame
 
+    # Mode Video
     if current_config['active']:
         detections = None
         
@@ -88,29 +94,38 @@ def process_frame_optimized(frame, run_ai=True):
             
             if current_config['mode'] == 'count-video':
                 detections = tracker.update_with_detections(detections)
-                if line_zone is None: setup_line_zone(frame.shape)
-                cross_in, cross_out = line_zone.trigger(detections)
-                crossed = cross_in | cross_out
-                if np.any(crossed):
-                    for c_id in detections.class_id[crossed]:
-                        if c_id in CLASS_ID_TO_NAME:
-                            stats['total'] += 1
-                            stats[CLASS_ID_TO_NAME[c_id]] += 1
+                # line_zone setup sudah dipindah ke atas agar aman
+                
+                # Cek ulang line_zone (Double Safety)
+                if line_zone:
+                    cross_in, cross_out = line_zone.trigger(detections)
+                    crossed = cross_in | cross_out
+                    if np.any(crossed):
+                        for c_id in detections.class_id[crossed]:
+                            if c_id in CLASS_ID_TO_NAME:
+                                stats['total'] += 1
+                                stats[CLASS_ID_TO_NAME[c_id]] += 1
             
+            # Simpan hasil deteksi untuk frame selanjutnya
             last_detections = detections
         else:
+            #use hasil deteksi lama (Cepat)
             detections = last_detections
 
+        # Gambar Visualisasi (Kalau ada deteksi)
         if detections:
             labels = [f"{CLASS_ID_TO_NAME[c_id]}" for c_id in detections.class_id]
             
             if current_config['mode'] == 'count-video':
                 frame = trace_annotator.annotate(scene=frame, detections=detections)
-                line_zone_annotator.annotate(frame, line_counter=line_zone)
+                # Cek Linezone sebelum menggambar (Pencegahan Crash)
+                if line_zone:
+                    line_zone_annotator.annotate(frame, line_counter=line_zone)
 
             frame = box_annotator.annotate(scene=frame, detections=detections)
             frame = label_annotator.annotate(scene=frame, detections=detections, labels=labels)
 
+        # Overlay Total
         text = f"TOTAL: {stats['total']}"
         cv2.rectangle(frame, (10, frame.shape[0] - 40), (150, frame.shape[0] - 10), (0, 0, 0), -1)
         cv2.putText(frame, text, (20, frame.shape[0] - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
@@ -121,12 +136,13 @@ def get_video_frames():
     if not current_config['active'] or current_config['source'] is None: return 
     cap = cv2.VideoCapture(current_config['source'])
     
+    # FPS SYNC SETUP
     video_fps = cap.get(cv2.CAP_PROP_FPS)
     if video_fps == 0: video_fps = 30 
     frame_duration = 1.0 / video_fps 
 
     frame_counter = 0
-    SKIP_FRAMES = 2
+    SKIP_FRAMES = 2 
     
     while current_config['active']:
         start_time = time.time()
@@ -152,6 +168,7 @@ def get_video_frames():
 
     cap.release()
 
+#routes
 @app.route('/stop_camera', methods=['POST'])
 def stop_camera():
     global current_config
@@ -167,7 +184,8 @@ def set_webcam():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    global current_config, stats, line_zone, tracker
+    # Tambahkan last_detections agar direset
+    global current_config, stats, line_zone, tracker, last_detections
     if 'file' not in request.files: return jsonify({"error": "No file"}), 400
     file = request.files['file']
     filename = secure_filename(file.filename)
@@ -175,6 +193,7 @@ def upload_file():
     file.save(filepath)
     
     tracker = sv.ByteTrack()
+    last_detections = None # Reset deteksi lama agar tidak muncul kotak hantu
     current_config['active'] = True; current_config['source'] = filepath
     stats = { "car": 0, "motorbike": 0, "bus": 0, "truck": 0, "total": 0 }
     ext = filename.rsplit('.', 1)[1].lower()
