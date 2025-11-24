@@ -18,7 +18,7 @@ UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER): os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-model = YOLO("yolo11s.pt") 
+model = YOLO("yolo11n.pt") 
 
 CLASS_ID_TO_NAME = { 2: "car", 3: "motorbike", 5: "bus", 7: "truck" }
 VALID_CLASSES = [2, 3, 5, 7]
@@ -132,7 +132,7 @@ def get_video_frames():
     
     #skip frame variables
     frame_counter = 0
-    SKIP_FRAMES = 3 
+    SKIP_FRAMES = 2 
     
     while current_config['active']:
         success, frame = cap.read()
