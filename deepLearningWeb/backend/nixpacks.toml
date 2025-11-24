@@ -1,5 +1,4 @@
 # Konfigurasi Sistem untuk Railway
-# Kita set Python 3.11 agar stabil
 [packages]
 python311 = "3.11"
 ffmpeg = "latest"
@@ -7,14 +6,15 @@ libgl1 = "latest"
 glib = "latest"
 
 [phases.install]
-# Perintah install library Python
-# PENTING: Baris kedua akan menghapus 'opencv-python' biasa yang terbawa otomatis
-# Agar sistem dipaksa menggunakan 'opencv-python-headless'
+# Strategi Perbaikan:
+# 1. Install requirements (Mungkin opencv-python biasa ikut masuk)
+# 2. Uninstall opencv-python biasa (Ini akan bikin folder cv2 hilang/rusak)
+# 3. Force Re-install opencv-python-headless (Ini akan memperbaiki folder cv2 pakai versi headless)
 cmds = [
     "python -m venv --copies /opt/venv && . /opt/venv/bin/activate && pip install -r requirements.txt",
-    ". /opt/venv/bin/activate && pip uninstall -y opencv-python || true"
+    ". /opt/venv/bin/activate && pip uninstall -y opencv-python || true",
+    ". /opt/venv/bin/activate && pip install --force-reinstall opencv-python-headless"
 ]
 
 [start]
-# Perintah menjalankan aplikasi
 cmd = "/opt/venv/bin/python app.py"
