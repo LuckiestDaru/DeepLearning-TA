@@ -2,7 +2,8 @@
 # Taruh file ini di ROOT (sejajar dengan package.json)
 
 [phases.setup]
-nixPkgs = ["nodejs", "npm"]
+# Cukup panggil "nodejs", npm otomatis ikut terinstall
+nixPkgs = ["nodejs"]
 
 [phases.build]
 cmds = ["npm install", "npm run build"]
